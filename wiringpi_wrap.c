@@ -3841,12 +3841,29 @@ SWIGINTERN PyObject *Swig_var_waitForInterrupt_get(void) {
   return pyobj;
 }
 
+PyObject *event_callback[64];
+PyObject *event_callback_data[64];
+
+void _wiringPiISR_callback(void *arg) {
+	PyObject *result;
+	int pinNumber = *((int *) arg);
+
+	if (event_callback) {
+		PyGILState_STATE _swig_thread_block = PyGILState_Ensure();
+		result = PyObject_CallFunction(event_callback[pinNumber], "O", event_callback_data[pinNumber]);
+		if (result == NULL && PyErr_Occurred()) {
+			PyErr_Print();
+			PyErr_Clear();
+		}
+		Py_XDECREF(result);
+		PyGILState_Release(_swig_thread_block);
+	}
+}
 
 SWIGINTERN PyObject *_wrap_wiringPiISR(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   int arg1 ;
   int arg2 ;
-  void (*arg3)(void) = (void (*)(void)) 0 ;
   int val1 ;
   int ecode1 = 0 ;
   int val2 ;
@@ -3854,9 +3871,12 @@ SWIGINTERN PyObject *_wrap_wiringPiISR(PyObject *SWIGUNUSEDPARM(self), PyObject 
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   PyObject * obj2 = 0 ;
+  PyObject * cb_func = NULL;
+  PyObject * cb_arg = NULL;
   int result;
+  int *pinNumber;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:wiringPiISR",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO|O:wiringPiISR",&obj0,&obj1,&obj2,&cb_arg)) SWIG_fail;
   ecode1 = SWIG_AsVal_int(obj0, &val1);
   if (!SWIG_IsOK(ecode1)) {
     SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "wiringPiISR" "', argument " "1"" of type '" "int""'");
@@ -3868,12 +3888,26 @@ SWIGINTERN PyObject *_wrap_wiringPiISR(PyObject *SWIGUNUSEDPARM(self), PyObject 
   } 
   arg2 = (int)(val2);
   {
-    int res = SWIG_ConvertFunctionPtr(obj2, (void**)(&arg3), SWIGTYPE_p_f_void__void);
-    if (!SWIG_IsOK(res)) {
-      SWIG_exception_fail(SWIG_ArgError(res), "in method '" "wiringPiISR" "', argument " "3"" of type '" "void (*)(void)""'"); 
-    }
+	if (!PyArg_ParseTuple(args, "iiO|O", &val1, &val2, &cb_func, &cb_arg)) {
+		SWIG_exception_fail(SWIG_ArgError(SWIG_TypeError), "in method '" "wiringPiISR" "', argument " "3"" of type '" "function""'");
+	}
+	if (!PyCallable_Check(cb_func)) {
+		SWIG_exception_fail(SWIG_ArgError(SWIG_TypeError), "in method '" "wiringPiISR" "', argument " "3"" of type '" "function""'");
+	}
+	if (event_callback[arg1]) {
+		Py_XDECREF(event_callback[arg1]);
+	}
+	if (event_callback_data[arg1]) {
+		Py_XDECREF(event_callback_data[arg1]);
+	}
+    event_callback[arg1] = cb_func;
+    event_callback_data[arg1] = cb_arg;
+    Py_XINCREF(cb_func);
+    Py_XINCREF(cb_arg);
   }
-  result = (int)wiringPiISR(arg1,arg2,arg3);
+  pinNumber = (int *)malloc(sizeof(*pinNumber));
+  *pinNumber = arg1;
+  result = (int)wiringPiISRWithArg(arg1,arg2,&_wiringPiISR_callback,pinNumber);
   resultobj = SWIG_From_int((int)(result));
   return resultobj;
 fail:
