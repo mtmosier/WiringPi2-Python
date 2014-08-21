@@ -7,8 +7,7 @@ WiringPi: An implementation of most of the Arduino Wiring
 
 WiringPi2: WiringPi version 2 implements new functions for managing IO expanders.
 
-**Changes**
-
+**Changes:**
 The only change made in this fork was to allow wiringPiISR to take a python function and argument for the callback.
 
 **Testing:**
